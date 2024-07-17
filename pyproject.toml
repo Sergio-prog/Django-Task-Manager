@@ -12,8 +12,37 @@ python-dotenv = "^1.0.1"
 psycopg2 = "^2.9.9"
 djangorestframework = "^3.15.2"
 djangorestframework-simplejwt = "^5.3.1"
+black = "^24.4.2"
+isort = "^5.13.2"
+pre-commit = "^3.7.1"
 
+
+[tool.poetry.group.dev.dependencies]
+pre-commit = "^3.7.1"
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 120
+target-version = ['py310', 'py311', 'py312']
+include = '\.pyi?$'
+
+exclude = '''
+(
+  /(
+      .eggs         # exclude a few common directories in the
+    | .git          # root of the project
+    | .mypy_cache
+    | .venv
+    | static
+    | /*/migrations
+    | /*/*/migrations
+  )/
+  | manage.py
+)
+'''
+
+[tool.isort]
+profile = "black"
