@@ -42,7 +42,18 @@ class AuthorizationTest(TestCase):
         self.assertEqual(response2.json(), error)
 
     def test_refresh_token(self):
-        pass
+        test_user_data = {"email": "example@example.com", "password": "L5Kr72Xb8i", "username": "TestUser"}
+
+        response = self.client.post("/api/auth/signup/", data=test_user_data)
+        response_body = response.json()
+
+        self.assertEqual(response.status_code, 201)
+        tokens = response_body["tokens"]
+        refresh_token = tokens["refresh_token"]
+
+        respones_refresh = self.client.post(
+            "/api/auth/refresh/",
+        )  # TODO
 
     def test_refresh_token_with_undefined_token(self):
         pass
