@@ -37,10 +37,6 @@ class CategorySerializer(serializers.ModelSerializer):
     creator = CustomUserSerializer(read_only=True)
     name = serializers.CharField(max_length=200)
 
-    # def create(self, validated_data):
-    #     validated_data["created_by"] = self.context["request"].user
-    #     return super().create(validated_data)
-
     class Meta:
         model = Category
         fields = "__all__"
@@ -66,11 +62,6 @@ class TaskSerializer(serializers.ModelSerializer):
         if assigned_to_username:
             assigned_to_user = get_object_or_404(CustomUser, username=assigned_to_username)
             validated_data["assigned_to"] = assigned_to_user
-
-        # category_id = validated_data.pop("category_id", None)
-        # print(category_id)
-        # if category_id:
-        #     validated_data["category"] = get_object_or_404(Category, id=category_id)
 
         # validated_data["creator"] = self.context['request'].user
         task = Task.objects.create(**validated_data)
