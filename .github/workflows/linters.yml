@@ -31,5 +31,3 @@ jobs:
 
       - name: black
         uses: psf/black@stable
-        with:
-          use_pyproject: true
