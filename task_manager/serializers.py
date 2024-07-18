@@ -13,6 +13,7 @@ from rest_framework_simplejwt import exceptions
 from rest_framework_simplejwt.settings import api_settings
 from rest_framework_simplejwt.tokens import AccessToken, RefreshToken, Token
 
+from task_manager.fields import EnumField
 from task_manager.models import Category, CustomUser, Task, TaskPriority
 
 
@@ -33,8 +34,12 @@ class CustomUserSerializer(serializers.ModelSerializer):
 
 
 class CategorySerializer(serializers.ModelSerializer):
-    created_by = CustomUserSerializer(read_only=True)
+    creator = CustomUserSerializer(read_only=True)
     name = serializers.CharField(max_length=200)
+
+    # def create(self, validated_data):
+    #     validated_data["created_by"] = self.context["request"].user
+    #     return super().create(validated_data)
 
     class Meta:
         model = Category
@@ -49,9 +54,12 @@ class TaskSerializer(serializers.ModelSerializer):
     title = serializers.CharField(max_length=200)
     body = serializers.CharField()
     category = CategorySerializer(read_only=True)
-    category_id = serializers.PrimaryKeyRelatedField(write_only=True, required=False, queryset=Category.objects.all())
+    category_id = serializers.PrimaryKeyRelatedField(
+        write_only=True, required=False, queryset=Category.objects.all(), source="category"
+    )
     deadline = serializers.TimeField(allow_null=True, required=False)
-    priority = serializers.CharField(choices=Task.priority_choices, default=TaskPriority.MEDIUM)
+    priority = EnumField(enum=TaskPriority, default=TaskPriority.MEDIUM)
+    completed = serializers.BooleanField(read_only=True)
 
     def create(self, validated_data):
         assigned_to_username = validated_data.pop("assigned_to_username", None)
@@ -59,12 +67,19 @@ class TaskSerializer(serializers.ModelSerializer):
             assigned_to_user = get_object_or_404(CustomUser, username=assigned_to_username)
             validated_data["assigned_to"] = assigned_to_user
 
+        # category_id = validated_data.pop("category_id", None)
+        # print(category_id)
+        # if category_id:
+        #     validated_data["category"] = get_object_or_404(Category, id=category_id)
+
+        # validated_data["creator"] = self.context['request'].user
         task = Task.objects.create(**validated_data)
         return task
 
     class Meta:
         model = Task
         fields = [
+            "id",
             "title",
             "creator",
             "created_at",
@@ -74,7 +89,13 @@ class TaskSerializer(serializers.ModelSerializer):
             "category_id",
             "assigned_to",
             "assigned_to_username",
+            "priority",
+            "completed",
         ]
+
+
+class GetTaskSerializer(serializers.ModelSerializer):
+    pass
 
 
 class RegisterSerializer(serializers.ModelSerializer):

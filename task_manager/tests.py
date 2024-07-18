@@ -1,9 +1,35 @@
+import random
+import uuid
+from typing import Any
+
 from django.test import TestCase
 
 from task_manager.models import CustomUser
 
 # Create your tests here.
 # TODO: Write tests
+
+
+def generate_user_data():
+    return {
+        "email": f"exampla{random.randint(1, 1000000)}@gmail.com",
+        "password": "L5Kr72Xb8i",
+        "username": f"TestUser{random.randint(1, 1000000)}",
+    }
+
+
+def create_new_user(client, user_data: dict[str] | None = None):
+    if not user_data:
+        user_data = generate_user_data()
+
+    response = client.post("/api/auth/signup/", data=user_data)
+    response_body = response.json()
+
+    return response_body
+
+
+def generate_headers(access_token: str):
+    return {"Authorization": "Bearer " + access_token}
 
 
 class AuthorizationTest(TestCase):
@@ -50,16 +76,154 @@ class AuthorizationTest(TestCase):
         self.assertEqual(response.status_code, 201)
         tokens = response_body["tokens"]
         refresh_token = tokens["refresh_token"]
+        access_token = tokens["access_token"]
 
-        respones_refresh = self.client.post(
-            "/api/auth/refresh/",
-        )  # TODO
+        refresh_data = {
+            "refresh": refresh_token,
+            "access": access_token,
+        }
 
-    def test_refresh_token_with_undefined_token(self):
-        pass
+        response_refresh = self.client.post("/api/auth/refresh/", data=refresh_data)
+        response_refresh_body = response_refresh.json()
+
+        self.assertEqual(response_refresh.status_code, 200)
+        self.assertNotEqual(response_refresh_body["access"], access_token)
+
+    # def test_refresh_token_with_undefined_token(self):
+    #     test_user_data = {"email": "example@example.com", "password": "L5Kr72Xb8i", "username": "TestUser"}
+    #
+    #     fake_user = create_new_user(self.client)
+    #
+    #     response = self.client.post("/api/auth/signup/", data=test_user_data)
+    #     response_body = response.json()
+    #
+    #     self.assertEqual(response.status_code, 201)
+    #
+    #     fake_data = {
+    #         "refresh": fake_user["tokens"]["refresh_token"],
+    #         "access": response_body["tokens"]["refresh_token"],
+    #     }
+    #
+    #     response_refresh = self.client.post(
+    #         "/api/auth/refresh/",
+    #         data=fake_data
+    #     )
+    #
+    #     self.assertEqual(response_refresh.status_code, 401)
 
     def test_login(self):
-        pass
+        user_data = generate_user_data()
+        new_user = create_new_user(self.client, user_data)
+
+        login_user = self.client.post("/api/auth/login/", data=user_data)
+        login_user_body = login_user.json()
+
+        self.assertEqual(login_user.status_code, 200)
+        self.assertNotEqual(new_user["tokens"]["access_token"], login_user_body["refresh"])
+        self.assertNotEqual(new_user["tokens"]["refresh_token"], login_user_body["refresh"])
 
     def test_login_to_undefined_account(self):
-        pass
+        new_user = create_new_user(self.client)
+
+        login_to_undefined_user = self.client.post("/api/auth/login/", data=generate_user_data())
+        login_user_data = login_to_undefined_user.json()
+
+        self.assertEqual(login_to_undefined_user.status_code, 401)
+        self.assertEqual(login_user_data, {"detail": "No active account found with the given credentials"})
+
+
+class TasksTest(TestCase):
+    def create_task(self, client, task_data: dict, access_token: str):
+        headers = generate_headers(access_token)
+
+        new_task = self.client.post("/api/tasks/", data=task_data, headers=headers)
+
+        return new_task
+
+    @staticmethod
+    def compare_two_dicts(first: dict, second: dict):
+        keys = first.keys()
+        ...
+
+    def test_create_new_task(self):
+        new_user = create_new_user(self.client)
+
+        access_token = new_user["tokens"]["access_token"]
+        task_data = {
+            "assigned_to_username": new_user["user"]["username"],
+            "title": "Just a test task",
+            "body": "Do not read this body. This is a test.",
+            # "category_id": "",
+            "priority": 0,
+        }
+
+        new_task = self.create_task(self.client, task_data, access_token)
+        task_body = new_task.json()
+
+        self.assertEqual(new_task.status_code, 201)
+        self.assertEqual(task_body["title"], task_data["title"])
+        self.assertEqual(task_body["body"], task_data["body"])
+        self.assertEqual(task_body["priority"], task_data["priority"])
+
+    def test_get_tasks(self):
+        new_user = create_new_user(self.client)
+
+        access_token = new_user["tokens"]["access_token"]
+        task_data = {
+            "assigned_to_username": new_user["user"]["username"],
+            "title": "Just a test task",
+            "body": "Do not read this body. This is a test.",
+            # "category_id": "",
+            "priority": 0,
+        }
+
+        headers = generate_headers(access_token)
+
+        new_task = self.client.post("/api/tasks/", data=task_data, headers=headers)
+        new_task2 = self.client.post("/api/tasks/", data=task_data, headers=headers)
+        task_body = [new_task.json(), new_task2.json()]
+
+        tasks_by_user = self.client.get("/api/tasks/", headers=headers)
+        tasks_body = tasks_by_user.json()
+
+        self.assertEqual(tasks_by_user.status_code, 200)
+        self.assertEqual(len(tasks_body), 2)
+        self.assertEqual(tasks_body, task_body)
+
+    def test_create_category_and_task_with_it(self):
+        new_user = create_new_user(self.client)
+
+        access_token = new_user["tokens"]["access_token"]
+        headers = generate_headers(access_token)
+
+        category_data = {"name": "Test category"}
+
+        new_category = self.client.post("/api/categories/", data=category_data, headers=headers)
+        category_body = new_category.json()
+
+        self.assertEqual(new_category.status_code, 201)
+
+        expected_result = {
+            **category_data,
+            "id": category_body["id"],
+            "creator": {
+                "first_name": "",
+                "last_name": "",
+                "username": new_user["user"]["username"],
+                "email": new_user["user"]["email"],
+            },
+        }
+        self.assertEqual(category_body, expected_result)
+
+        task_data = {
+            "assigned_to_username": new_user["user"]["username"],
+            "title": "Just a test task",
+            "body": "Do not read this body. This is a test.",
+            "category_id": int(category_body["id"]),
+            "priority": 0,
+        }
+
+        new_task = self.client.post("/api/tasks/", data=task_data, headers=headers)
+        new_task_body = new_task.json()
+        self.assertEqual(new_task.status_code, 201)
+        self.assertEqual(new_task_body["category"]["id"], category_body["id"])

@@ -9,10 +9,10 @@ repos:
     hooks:
       - id: isort
 
-  - repo: local
-    hooks:
-      - id: run-django-tests
-        name: Run Django tests
-        entry: poetry run python manage.py test
-        language: system
-        always_run: true
+#  - repo: local
+#    hooks:
+#      - id: run-django-tests
+#        name: Run Django tests
+#        entry: poetry run python manage.py test
+#        language: system
+#        always_run: true

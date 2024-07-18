@@ -13,7 +13,7 @@ class CustomUser(AbstractUser):
 # Create your models here.
 class Category(models.Model):
     name = models.CharField(max_length=200)
-    created_by = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    creator = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
 
 
 class TaskPriority(IntEnum):
@@ -35,6 +35,7 @@ class Task(models.Model):
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, default=None)
     deadline = models.DateTimeField(default=None, null=True)
     priority = models.CharField(choices=priority_choices, default=TaskPriority.MEDIUM)
+    completed = models.BooleanField(default=False)
 
     def __str__(self):
         return self.title

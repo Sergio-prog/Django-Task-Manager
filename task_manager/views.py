@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
+from task_manager.models import Task
 from task_manager.serializers import (
     CategorySerializer,
     RegisterSerializer,
@@ -17,11 +18,10 @@ class CreateCategoryView(APIView):
 
     def post(self, request):
         body = request.data
-        body["created_by"] = request.user
 
         serializer = CategorySerializer(data=body)
         if serializer.is_valid():
-            serializer.save()
+            serializer.save(creator=request.user)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -33,14 +33,19 @@ class TasksView(APIView):
 
     def post(self, request):
         body = request.data
-        body["creator"] = request.user
 
         serializer = TaskSerializer(data=body)
         if serializer.is_valid():
-            serializer.save()
+            serializer.save(creator=request.user)  # TODO: Maybe I need to use kwargs in save method
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def get(self, request):  # Get current tasks
+        tasks = Task.objects.filter(creator=request.user)
+        serializer = TaskSerializer(tasks, many=True)
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class RegisterView(APIView):
