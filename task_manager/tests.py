@@ -6,7 +6,6 @@ from django.test import TestCase
 
 from task_manager.models import CustomUser, Task
 
-
 # Create your tests here.
 # TODO: Write tests
 
@@ -288,7 +287,9 @@ class TasksTest(TestCase):
 
         new_task = {**task_body, "priority": 2}
 
-        completed_task = self.client.patch(f"/api/tasks/{task_body['id']}/", content_type="application/json", data=new_task, headers=headers)
+        completed_task = self.client.patch(
+            f"/api/tasks/{task_body['id']}/", content_type="application/json", data=new_task, headers=headers
+        )
         completed_task_body = completed_task.json()
 
         self.assertEqual(completed_task.status_code, 200)
