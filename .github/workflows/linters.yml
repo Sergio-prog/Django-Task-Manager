@@ -3,7 +3,7 @@ name: Linters
 on: [push, pull_request]
 
 jobs:
-  isort:
+  lint:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

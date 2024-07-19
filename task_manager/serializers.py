@@ -67,6 +67,18 @@ class TaskSerializer(serializers.ModelSerializer):
         task = Task.objects.create(**validated_data)
         return task
 
+    def update(self, instance, validated_data):
+        assigned_to_username = validated_data.pop("assigned_to_username", None)
+        if assigned_to_username:
+            assigned_to_user = get_object_or_404(CustomUser, username=assigned_to_username)
+            validated_data["assigned_to"] = assigned_to_user
+
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+
+        instance.save()
+        return instance
+
     class Meta:
         model = Task
         fields = [
@@ -85,8 +97,8 @@ class TaskSerializer(serializers.ModelSerializer):
         ]
 
 
-class GetTaskSerializer(serializers.ModelSerializer):
-    pass
+class CompleteTaskSerializer(serializers.Serializer):
+    task_id = serializers.PrimaryKeyRelatedField(write_only=True, required=True, queryset=Task.objects.all())
 
 
 class RegisterSerializer(serializers.ModelSerializer):

@@ -4,7 +4,8 @@ from typing import Any
 
 from django.test import TestCase
 
-from task_manager.models import CustomUser
+from task_manager.models import CustomUser, Task
+
 
 # Create your tests here.
 # TODO: Write tests
@@ -140,6 +141,23 @@ class TasksTest(TestCase):
 
         return new_task
 
+    def create_task_shorter(self):
+        new_user = create_new_user(self.client)
+
+        access_token = new_user["tokens"]["access_token"]
+        task_data = {
+            "assigned_to_username": new_user["user"]["username"],
+            "title": "Just a test task",
+            "body": "Do not read this body. This is a test.",
+            # "category_id": "",
+            "priority": 0,
+        }
+
+        new_task = self.create_task(self.client, task_data, access_token)
+        task_body = new_task.json()
+
+        return task_body, access_token
+
     @staticmethod
     def compare_two_dicts(first: dict, second: dict):
         keys = first.keys()
@@ -227,3 +245,54 @@ class TasksTest(TestCase):
         new_task_body = new_task.json()
         self.assertEqual(new_task.status_code, 201)
         self.assertEqual(new_task_body["category"]["id"], category_body["id"])
+
+    def test_complete_task(self):
+        task_body, token = self.create_task_shorter()
+        headers = generate_headers(token)
+
+        expected_task = task_body
+        expected_task["completed"] = True
+
+        completed_task = self.client.post("/api/tasks/complete/", data={"task_id": task_body["id"]}, headers=headers)
+        completed_task_body = completed_task.json()
+
+        self.assertEqual(completed_task.status_code, 201)
+        self.assertEqual(completed_task_body["completed"], expected_task["completed"])
+
+        task_search = Task.objects.first()
+        self.assertEqual(task_search.completed, True)
+
+    def test_get_task(self):
+        task_body, token = self.create_task_shorter()
+        headers = generate_headers(token)
+
+        get_task = self.client.get(f"/api/tasks/{task_body['id']}/", headers=headers)
+        get_task_body = get_task.json()
+
+        self.assertEqual(get_task.status_code, 200)
+        self.assertEqual(get_task_body, task_body)
+
+    def test_delete_task(self):
+        task_body, token = self.create_task_shorter()
+        headers = generate_headers(token)
+
+        get_task = self.client.delete(f"/api/tasks/{task_body['id']}/", headers=headers)
+
+        self.assertEqual(get_task.status_code, 200)
+        task_search = Task.objects.all()
+        self.assertEqual(len(task_search), 0)
+
+    def test_update_task(self):
+        task_body, token = self.create_task_shorter()
+        headers = generate_headers(token)
+
+        new_task = {**task_body, "priority": 2}
+
+        completed_task = self.client.patch(f"/api/tasks/{task_body['id']}/", content_type="application/json", data=new_task, headers=headers)
+        completed_task_body = completed_task.json()
+
+        self.assertEqual(completed_task.status_code, 200)
+        self.assertEqual(completed_task_body["priority"], new_task["priority"])
+
+        task_search = Task.objects.first()
+        self.assertEqual(int(task_search.priority), 2)
