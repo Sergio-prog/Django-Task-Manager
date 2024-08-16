@@ -9,16 +9,19 @@ from task_manager.models import CustomUser, Task
 # Create your tests here.
 # TODO: Write tests
 
+DEFAULT_PASSWORD = "L5Kr72Xb8i"
+DEFAULT_TEST_USER = {"email": "example@example.com", "password": DEFAULT_PASSWORD, "username": "TestUser"}
+
 
 def generate_user_data():
     return {
         "email": f"exampla{random.randint(1, 1000000)}@gmail.com",
-        "password": "L5Kr72Xb8i",
+        "password": DEFAULT_PASSWORD,
         "username": f"TestUser{random.randint(1, 1000000)}",
     }
 
 
-def create_new_user(client, user_data: dict[str] | None = None):
+def create_new_user(client, user_data: dict[str, str] | None = None):
     if not user_data:
         user_data = generate_user_data()
 
@@ -34,16 +37,14 @@ def generate_headers(access_token: str):
 
 class AuthorizationTest(TestCase):
     def test_register_function(self):
-        test_user_data = {"email": "example@example.com", "password": "L5Kr72Xb8i", "username": "TestUser"}
-
-        response = self.client.post("/api/auth/signup/", data=test_user_data)
+        response = self.client.post("/api/auth/signup/", data=DEFAULT_TEST_USER)
         response_body = response.json()
 
         self.assertEqual(response.status_code, 201)
 
         self.assertIsNotNone(response_body.get("tokens"))
         self.assertIsNotNone(response_body.get("user"))
-        self.assertIsNotNone(response_body.get("tokens", {}).get("access_token"))
+        self.assertIsNotNone(response_body["tokens"].get("access_token"))
 
         self.assertEqual(CustomUser.objects.first().username, "TestUser")
         self.assertEqual(CustomUser.objects.first().email, "example@example.com")
@@ -57,20 +58,16 @@ class AuthorizationTest(TestCase):
         self.assertEqual(response.json(), error)
 
     def test_register_already_registered_user(self):
-        test_user_data = {"email": "example@example.com", "password": "L5Kr72Xb8i", "username": "TestUser"}
-
-        response1 = self.client.post("/api/auth/signup/", data=test_user_data)
+        response1 = self.client.post("/api/auth/signup/", data=DEFAULT_TEST_USER)
         self.assertEqual(response1.status_code, 201)
 
         error = {"username": ["This field must be unique."], "email": ["This field must be unique."]}
-        response2 = self.client.post("/api/auth/signup/", data=test_user_data)
+        response2 = self.client.post("/api/auth/signup/", data=DEFAULT_TEST_USER)
         self.assertEqual(response2.status_code, 400)
         self.assertEqual(response2.json(), error)
 
     def test_refresh_token(self):
-        test_user_data = {"email": "example@example.com", "password": "L5Kr72Xb8i", "username": "TestUser"}
-
-        response = self.client.post("/api/auth/signup/", data=test_user_data)
+        response = self.client.post("/api/auth/signup/", data=DEFAULT_TEST_USER)
         response_body = response.json()
 
         self.assertEqual(response.status_code, 201)
@@ -88,28 +85,36 @@ class AuthorizationTest(TestCase):
 
         self.assertEqual(response_refresh.status_code, 200)
         self.assertNotEqual(response_refresh_body["access"], access_token)
+        self.assertNotEqual(response_refresh_body["refresh"], refresh_token)
 
-    # def test_refresh_token_with_undefined_token(self):
-    #     test_user_data = {"email": "example@example.com", "password": "L5Kr72Xb8i", "username": "TestUser"}
-    #
+    def test_get_user(self):
+        user = create_new_user(self.client)
+        get_user_response = self.client.get("/api/users/", headers=generate_headers(user["tokens"]["access_token"]))
+        get_user = get_user_response.json()
+
+        self.assertEqual(get_user_response.status_code, 200)
+        self.assertEqual(get_user, user["user"])
+
+    # def test_refresh_token_with_token_another_user(self):
     #     fake_user = create_new_user(self.client)
     #
-    #     response = self.client.post("/api/auth/signup/", data=test_user_data)
-    #     response_body = response.json()
-    #
-    #     self.assertEqual(response.status_code, 201)
+    #     true_user_response = self.client.post("/api/auth/signup/", data=DEFAULT_TEST_USER)
+    #     true_user = true_user_response.json()
     #
     #     fake_data = {
     #         "refresh": fake_user["tokens"]["refresh_token"],
-    #         "access": response_body["tokens"]["refresh_token"],
+    #         "access": true_user["tokens"]["access_token"],
     #     }
     #
     #     response_refresh = self.client.post(
     #         "/api/auth/refresh/",
     #         data=fake_data
     #     )
+    #     new_access = response_refresh.json()["access"]
     #
-    #     self.assertEqual(response_refresh.status_code, 401)
+    #     headers = generate_headers(new_access)
+    #     user = self.client.get("/api/users/", headers=headers).json()
+    #     self.assertEqual(user["username"], true_user["user"]["username"])
 
     def test_login(self):
         user_data = generate_user_data()
@@ -119,7 +124,7 @@ class AuthorizationTest(TestCase):
         login_user_body = login_user.json()
 
         self.assertEqual(login_user.status_code, 200)
-        self.assertNotEqual(new_user["tokens"]["access_token"], login_user_body["refresh"])
+        self.assertNotEqual(new_user["tokens"]["access_token"], login_user_body["access"])
         self.assertNotEqual(new_user["tokens"]["refresh_token"], login_user_body["refresh"])
 
     def test_login_to_undefined_account(self):
@@ -260,6 +265,9 @@ class TasksTest(TestCase):
 
         task_search = Task.objects.first()
         self.assertEqual(task_search.completed, True)
+
+    def test_complete_task_two_times(self):
+        pass
 
     def test_get_task(self):
         task_body, token = self.create_task_shorter()

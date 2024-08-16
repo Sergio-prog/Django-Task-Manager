@@ -48,7 +48,7 @@ class TaskSerializer(serializers.ModelSerializer):
     assigned_to_username = serializers.CharField(required=False, write_only=True)
     created_at = serializers.DateTimeField(read_only=True)
     title = serializers.CharField(max_length=200)
-    body = serializers.CharField()
+    body = serializers.CharField(required=False)
     category = CategorySerializer(read_only=True)
     category_id = serializers.PrimaryKeyRelatedField(
         write_only=True, required=False, queryset=Category.objects.all(), source="category"

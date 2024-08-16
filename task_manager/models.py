@@ -29,9 +29,9 @@ class Task(models.Model):
     assigned_to = models.ForeignKey(
         CustomUser, on_delete=models.CASCADE, null=True, default=None, related_name="assigned_to_users"
     )
-    created_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True)
     title = models.CharField(max_length=200)
-    body = models.TextField()
+    body = models.TextField(null=True, default=None)
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, default=None)
     deadline = models.DateTimeField(default=None, null=True)
     priority = models.CharField(choices=priority_choices, default=TaskPriority.MEDIUM)

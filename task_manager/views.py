@@ -5,10 +5,11 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
-from task_manager.models import Task
+from task_manager.models import CustomUser, Task
 from task_manager.serializers import (
     CategorySerializer,
     CompleteTaskSerializer,
+    CustomUserSerializer,
     RegisterSerializer,
     TaskSerializer,
 )
@@ -44,7 +45,7 @@ class TasksView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     def get(self, request):  # Get current tasks
-        tasks = Task.objects.filter(creator=request.user)
+        tasks = Task.objects.filter(creator=request.user).order_by("id")
         serializer = TaskSerializer(tasks, many=True)
 
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -93,7 +94,7 @@ class CompleteTaskView(APIView):
 
         if serializer.is_valid():
             task = serializer.validated_data["task_id"]
-            task.completed = True
+            task.completed = not task.completed
             task.save()
 
             task_serializer = TaskSerializer(task)
@@ -112,3 +113,13 @@ class RegisterView(APIView):
             return Response(user_response, status=status.HTTP_201_CREATED)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class GetUser(APIView):
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [JWTAuthentication]
+
+    def get(self, request):
+        user = get_object_or_404(CustomUser, id=request.user.id)
+        serializer = CustomUserSerializer(user)
+        return Response(serializer.data)

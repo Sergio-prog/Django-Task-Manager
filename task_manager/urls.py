@@ -11,4 +11,5 @@ urlpatterns = [
     path("categories/", views.CreateCategoryView.as_view(), name="categories"),
     path("tasks/<int:pk>/", views.EditDeleteGetTaskView.as_view(), name="delete_update_task"),
     path("tasks/complete/", views.CompleteTaskView.as_view(), name="complete_tasks"),
+    path("users/", views.GetUser.as_view(), name="current_user"),
 ]
