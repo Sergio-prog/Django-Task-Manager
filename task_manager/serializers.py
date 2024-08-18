@@ -133,7 +133,7 @@ class RegisterSerializer(serializers.ModelSerializer):
 
         user_data = CustomUserSerializer(user).data
 
-        token = RefreshToken.for_user(user)
+        token: RefreshToken = RefreshToken.for_user(user)  # type: ignore
         tokens = {
             "access_token": str(token.access_token),
             "refresh_token": str(token),

@@ -16,6 +16,8 @@ black = "^24.4.2"
 isort = "^5.13.2"
 pre-commit = "^3.7.1"
 django-cors-headers = "^4.4.0"
+celery = "^5.4.0"
+django-celery-beat = "^2.6.0"
 
 
 [tool.poetry.group.dev.dependencies]

@@ -20,7 +20,6 @@ function generate_headers(access_token: string | null) {
 export const TodoList = () => {
     const [todos, setTodos] = useState<Todo[]>([]);
     const [newTodo, setNewTodo] = useState("");
-    // const [accessToken, setAccessToken] = useState<string | null>(null);
     const router = useRouter();
     const [isLoading, setIsLoading] = useState<boolean>(false);
     const accessToken = localStorage.getItem("access_token");
@@ -127,6 +126,7 @@ export const TodoList = () => {
                 <button
                 className="bg-blue-500 text-white p-2 px-5 ml-4 rounded-md"
                 onClick={handleAddTodo}
+                about="Add task"
                 >
                 Add
                 </button>
@@ -142,12 +142,16 @@ export const TodoList = () => {
                     <span
                     className={`cursor-pointer ${todo.completed ? "line-through" : ""}`}
                     onClick={() => handleToggleTodo(todo.id)}
+                    about={todo.completed ? "Task is completed" : "Task is not completed"}
                     >
                     {`${todo.completed ? "✅" : "❌"} ${todo.title}`}
                     </span>
 
-                    <button className="bg-red-500 text-white px-3 py-0.5 text-[15px] no-underline rounded-md"
-                    onClick={() => handleDeleteTodo(todo.id)}>
+                    <button 
+                    className="bg-red-500 text-white px-3 py-0.5 text-[15px] no-underline rounded-md"
+                    onClick={() => handleDeleteTodo(todo.id)}
+                    about="Delete Task"
+                    >
                     Delete
                     </button>
                 </li>
